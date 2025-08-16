@@ -41,17 +41,14 @@ IDE (to make changes in webcam features)
 1. Clone repo
 ```
 git clone https://github.com/JohnThunderr/StartUp2025ImageRecognitionProject.git
-
 ```
 2. Install dependencies 
 ```
 pip install -r requirements.txt
-
 ```
 3. Run the app 
 ```
 python main.py
-
 ```
 
 
