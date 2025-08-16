@@ -1,0 +1,6 @@
+{% extends "base.html" %} {% block title %}Webcam{% endblock %}
+{% block content %}
+<h1>Webcam</h1>
+<p>Close this page to stop the stream. If it doesn't start, make sure your camera isn't in use by another app.</p>
+<img src="{{ url_for('views.video_feed') }}" width="640" height="480" />
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %} {% block title %}Developer Dashboard{% endblock %}
+{% block content %}
+<h1>Developer Dashboard</h1>
+<p>Welcome {{ user.first_name }} (developer)</p>
+
+<a class="btn btn-primary" href="{{ url_for('views.webcam_page') }}">Open Webcam</a>
+
+<hr />
+<!-- Example: extra developer-only tools you can wire later -->
+<div class="mt-3">
+  <a class="btn btn-outline-secondary" href="#">Dev Tool 1 (stub)</a>
+  <a class="btn btn-outline-secondary" href="#">Dev Tool 2 (stub)</a>
+</div>
+{% endblock %}

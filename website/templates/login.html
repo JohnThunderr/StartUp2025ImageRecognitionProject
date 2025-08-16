@@ -1,0 +1,71 @@
+{% extends "base.html" %} {% block title %}Login{% endblock %}
+
+{% block content %}
+<form method="POST" onsubmit="return validateForm()">
+    <h2 align="center">Login</h2>
+    
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" class="form-control" id="email" name="email" 
+               placeholder="Enter your email" required
+               oninput="validateEmail()">
+        <small class="text-danger" id="email-error"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" class="form-control" id="password" name="password" 
+               placeholder="Enter your password" required
+               oninput="validatePassword()">
+        <small class="text-danger" id="password-error"></small>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Login</button>
+</form>
+
+<script>
+    function validateEmail() {
+    const field = document.getElementById('email');
+    const error = document.getElementById('email-error');
+    const emailRegex = /^[a-zA-Z0-9._%+-]{4,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+        if (field.value.length === 0) {
+            field.classList.remove('is-invalid');
+            error.textContent = '';
+            return false;
+        }
+    
+        if (!emailRegex.test(field.value)) {
+            field.classList.add('is-invalid');
+            if (field.value.indexOf('@') === -1) {
+                error.textContent = 'Missing @ symbol';
+            } else if (field.value.split('@')[0].length < 4) {
+                error.textContent = '4+ characters required before @';
+            } else if (!field.value.includes('.')) {
+                error.textContent = 'Invalid domain (missing .)';
+            } else {
+                error.textContent = 'Enter a valid email (e.g., name@domain.com)';
+            }
+            return false;
+        }
+    
+        field.classList.remove('is-invalid');
+        error.textContent = '';
+    return true;
+    }
+
+    function validatePassword() {
+        const field = document.getElementById('password');
+        const error = document.getElementById('password-error');
+        const isValid = field.value.length >= 7;
+        
+        field.classList.toggle('is-invalid', !isValid);
+        error.textContent = isValid ? '' : 'Password must be at least 7 characters.';
+        return isValid;
+    }
+
+    function validateForm() {
+        return validateEmail() && validatePassword();
+    }
+</script>
+{% endblock %}

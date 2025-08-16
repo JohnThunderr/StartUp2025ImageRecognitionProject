@@ -1,0 +1,113 @@
+{% extends "base.html" %} {% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<form method="POST" onsubmit="return validateForm()">
+    <h2 align="center">Create an Account</h2>
+    
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" class="form-control" id="email" name="email" 
+               placeholder="Enter your email" required
+               oninput="validateEmail()">
+        <small class="text-danger" id="email-error"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="firstName">First Name:</label>
+        <input type="text" class="form-control" id="firstName" name="firstName" 
+               placeholder="Enter your first name" required
+               oninput="validateFirstName()">
+        <small class="text-danger" id="firstName-error"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="password1">Password:</label>
+        <input type="password" class="form-control" id="password1" name="password1" 
+               placeholder="Enter your password" required
+               oninput="validatePassword1()">
+        <small class="text-danger" id="password1-error"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="password2">Confirm Password:</label>
+        <input type="password" class="form-control" id="password2" name="password2" 
+               placeholder="Confirm your password" required
+               oninput="validatePassword2()">
+        <small class="text-danger" id="password2-error"></small>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Sign Up</button>
+</form>
+
+<script>
+    function validateEmail() {
+    const field = document.getElementById('email');
+    const error = document.getElementById('email-error');
+    const emailRegex = /^[a-zA-Z0-9._%+-]{4,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+        if (field.value.length === 0) {
+            field.classList.remove('is-invalid');
+            error.textContent = '';
+            return false;
+        }
+    
+        if (!emailRegex.test(field.value)) {
+            field.classList.add('is-invalid');
+            if (field.value.indexOf('@') === -1) {
+                error.textContent = 'Missing @ symbol';
+            } else if (field.value.split('@')[0].length < 4) {
+                error.textContent = '4+ characters required before @';
+            } else if (!field.value.includes('.')) {
+                error.textContent = 'Invalid domain (missing .)';
+            } else {
+                error.textContent = 'Enter a valid email (e.g., name@domain.com)';
+            }
+            return false;
+        }
+    
+        field.classList.remove('is-invalid');
+        error.textContent = '';
+    return true;
+    }
+
+    function validateFirstName() {
+        const field = document.getElementById('firstName');
+        const error = document.getElementById('firstName-error');
+        const isValid = field.value.length >= 2;
+        
+        field.classList.toggle('is-invalid', !isValid);
+        error.textContent = isValid ? '' : 'Name must be at least 2 characters.';
+        return isValid;
+    }
+
+    function validatePassword1() {
+        const field = document.getElementById('password1');
+        const error = document.getElementById('password1-error');
+        const isValid = field.value.length > 7;
+        
+        field.classList.toggle('is-invalid', !isValid);
+        error.textContent = isValid ? '' : 'Password must be at least 7 characters.';
+        return isValid;
+    }
+
+    function validatePassword2() {
+        const password1 = document.getElementById('password1');
+        const field = document.getElementById('password2');
+        const error = document.getElementById('password2-error');
+        const isValid = field.value === password1.value;
+        
+        field.classList.toggle('is-invalid', !isValid);
+        error.textContent = isValid ? '' : 'Passwords must match.';
+        return isValid;
+    }
+
+    function validateForm() {
+        const isEmailValid = validateEmail();
+        const isNameValid = validateFirstName();
+        const isPassValid = validatePassword1();
+        const isConfirmValid = validatePassword2();
+
+        return isEmailValid && isNameValid && isPassValid && isConfirmValid;
+    }
+</script>
+{% endblock %}
