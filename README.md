@@ -33,6 +33,8 @@ Python 3.8+
 
 IDE (to make changes in webcam features)
 
+SQLite
+
 
 
 ## 🚀 Getting Started
