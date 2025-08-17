@@ -1,14 +1,29 @@
-{% extends "base.html" %} {% block title %}Developer Dashboard{% endblock %}
+{% extends "base.html" %}
+{% block title %}Developer Dashboard{% endblock %}
+
 {% block content %}
-<h1>Developer Dashboard</h1>
-<p>Welcome {{ user.first_name }} (developer)</p>
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md">
+  <h1 class="text-2xl font-bold mb-4">Developer Dashboard</h1>
+  <p class="text-gray-700 mb-6">Welcome {{ user.first_name }} (developer)</p>
 
-<a class="btn btn-primary" href="{{ url_for('views.webcam_page') }}">Open Webcam</a>
+  <!-- Webcam -->
+  <a href="{{ url_for('views.webcam_page') }}" 
+     class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg mb-4">
+    Open Webcam
+  </a>
 
-<hr />
-<!-- Example: extra developer-only tools you can wire later -->
-<div class="mt-3">
-  <a class="btn btn-outline-secondary" href="#">Dev Tool 1 (stub)</a>
-  <a class="btn btn-outline-secondary" href="#">Dev Tool 2 (stub)</a>
+  <hr class="my-6 border-gray-300" />
+
+  <!-- Developer Tools -->
+  <div class="space-x-4">
+    <a href="#"
+       class="inline-block border border-gray-400 hover:bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg">
+       Dev Tool 1 (stub)
+    </a>
+    <a href="#"
+       class="inline-block border border-gray-400 hover:bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg">
+       Dev Tool 2 (stub)
+    </a>
+  </div>
 </div>
 {% endblock %}
