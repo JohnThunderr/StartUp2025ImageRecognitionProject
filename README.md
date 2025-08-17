@@ -3,8 +3,6 @@
 
 A Flask web application with user authentication, role-based dashboards (customer vs developer), and an integrated webcam streaming feature using OpenCV.
 
-This project is based on Tech With Tim’s Flask tutorial but modified to:
-
 ✅ Add webcam streaming inside the dashboard
 
 ✅ Support multiple user roles (customer, developer)
