@@ -1,9 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, Response
 from flask_login import login_required, current_user
+from ultralytics import YOLO
 from functools import wraps
 import cv2
 
 views = Blueprint("views", __name__)
+
+model = YOLO("tree_detection.pt")  # Load your custom-trained model
+CONF_THRESH = 0.6  
 
 
 # ---- Role helpers ----------------------------------------------------------
@@ -45,19 +49,43 @@ def developer_dashboard():
 
 
 # ---- Webcam (OpenCV MJPEG stream) ------------------------------------------
-def gen_frames(camera_index: int = 1):
+def gen_frames(camera_index: int = 0):
     cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
-        # If camera can't open, stop the generator (browser will show broken image)
         return
+
     try:
         while True:
             success, frame = cap.read()
             if not success:
                 break
-            ret, buffer = cv2.imencode(".jpg", frame)
-            if not ret:
-                continue
+
+            
+            results = model(frame, conf=CONF_THRESH)
+            annotated = results[0].plot()
+
+            boxes = results[0].boxes
+            confs = boxes.conf.tolist()
+
+            # Count trees (class 0) above confidence threshold
+            tree_count = sum(
+                1
+                for cls_id, conf in zip(boxes.cls.tolist(), confs)
+                if int(cls_id) == 0 and conf >= CONF_THRESH
+            )
+
+            # Annotate frame with tree count
+            cv2.putText(
+                annotated,
+                f"Trees: {tree_count}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2,
+            )
+
+            _, buffer = cv2.imencode(".jpg", annotated)
             frame_bytes = buffer.tobytes()
             yield (
                 b"--frame\r\n"
