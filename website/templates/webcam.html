@@ -13,6 +13,14 @@
     <img id="video" src="{{ url_for('views.video_feed') }}" width="640" height="480" class="rounded-lg shadow-md border border-gray-300"/>
     <canvas id="overlay" width="640" height="480" style="position: absolute; top: 0; left: 0;"></canvas>
   </div>
+
+  <!-- Stop Webcam Button -->
+  <div class="mt-4">
+    <button onclick="stopWebcam()" 
+            class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg">
+      Stop Webcam
+    </button>
+  </div>
 </div>
 
 <script>
@@ -22,6 +30,9 @@ let currentTrees = [];
 const BUTTON_WIDTH = 50;
 const BUTTON_HEIGHT = 20;
 const BUTTON_MARGIN = 5;
+
+// Pre-compute dashboard URL with Jinja
+const dashboardUrl = "{{ url_for('views.developer_dashboard') if user.role == 'developer' else url_for('views.customer_dashboard') }}";
 
 // Fetch detections every 200ms
 async function fetchDetections() {
@@ -96,6 +107,13 @@ function sendDecision(treeId, decision) {
     })
     .then(res => res.json())
     .then(data => console.log(`Tree ${treeId} marked as ${decision}`));
+}
+
+// Stop webcam and go to dashboard
+function stopWebcam() {
+    fetch("/webcam/stop").finally(() => {
+        window.location.href = dashboardUrl;
+    });
 }
 
 // Start polling

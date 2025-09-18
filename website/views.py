@@ -157,4 +157,6 @@ def stop_webcam():
         camera = None
     capture_thread = None
     detection_thread = None
+    print("Webcam stopped and threads released.")
     return "Camera released"
+
