@@ -1,5 +1,16 @@
-flask
-flask-login
-flask-sqlalchemy
-werkzeug
-opencv-python
+# Web framework
+Flask==2.3.6
+Flask-Login==0.6.2
+Flask-SQLAlchemy==3.0.5
+
+# Password hashing & security
+Werkzeug==2.3.8
+
+# OpenCV for webcam capture
+opencv-python==4.8.0.74
+
+# YOLO model handling
+ultralytics==8.0.140
+
+# Numeric computations (dependency for OpenCV and YOLO)
+numpy==1.26.0
