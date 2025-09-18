@@ -1,30 +1,29 @@
-from flask import Blueprint, render_template, redirect, url_for, Response
+from flask import Blueprint, render_template, redirect, url_for, Response, jsonify, request
 from flask_login import login_required, current_user
 from ultralytics import YOLO
 from functools import wraps
 import cv2
+import threading
+import time
 
 views = Blueprint("views", __name__)
 
-model = YOLO("tree_detection.pt")  # Load your custom-trained model
-CONF_THRESH = 0.6  
-
+# ---- Load YOLO model ----
+model = YOLO("tree_detection.pt")
+CONF_THRESH = 0.6
 
 # ---- Role helpers ----------------------------------------------------------
 def role_required(role):
-    """Allow only users with a specific role."""
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             if getattr(current_user, "role", "customer") != role:
-                # Non-developers get sent to their dashboard
                 return redirect(url_for("views.customer_dashboard"))
             return fn(*args, **kwargs)
         return wrapper
     return decorator
 
-
-# ---- Landing decides dashboard by role -------------------------------------
+# ---- Landing page ----------------------------------------------------------
 @views.route("/")
 def home():
     if current_user.is_authenticated:
@@ -33,13 +32,11 @@ def home():
         return redirect(url_for("views.customer_dashboard"))
     return redirect(url_for("auth.login"))
 
-
-# ---- Dashboards -------------------------------------------------------------
+# ---- Dashboards ------------------------------------------------------------
 @views.route("/customer")
 @login_required
 def customer_dashboard():
     return render_template("customer_dashboard.html", user=current_user)
-
 
 @views.route("/developer")
 @login_required
@@ -47,62 +44,117 @@ def customer_dashboard():
 def developer_dashboard():
     return render_template("developer_dashboard.html", user=current_user)
 
+# ---- Webcam + Detection Variables -----------------------------------------
+camera = None
+frame_lock = threading.Lock()
+latest_frame = None
+latest_detections = []
+capture_thread = None
+detection_thread = None
+tree_decisions = {}  # In-memory store for demo
 
-# ---- Webcam (OpenCV MJPEG stream) ------------------------------------------
-def gen_frames(camera_index: int = 0):
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
-        return
+# ---- Capture thread: grab raw frames for immediate display -----------------
+def capture_frames():
+    global latest_frame, camera
+    if camera is None:
+        camera = cv2.VideoCapture(0)
+        if not camera.isOpened():
+            print("ERROR: Cannot open webcam")
+            return
 
-    try:
-        while True:
-            success, frame = cap.read()
-            if not success:
-                break
+    while True:
+        success, frame = camera.read()
+        if not success:
+            time.sleep(0.05)
+            continue
+        with frame_lock:
+            latest_frame = frame.copy()  # raw frame for instant video
 
-            
-            results = model(frame, conf=CONF_THRESH)
-            annotated = results[0].plot()
+# ---- Detection thread: run YOLO asynchronously ----------------------------
+def detect_trees():
+    global latest_frame, latest_detections
+    while True:
+        with frame_lock:
+            if latest_frame is None:
+                time.sleep(0.05)
+                continue
+            frame_copy = latest_frame.copy()
+        results = model(frame_copy, conf=CONF_THRESH)
+        boxes = results[0].boxes
+        confs = boxes.conf.tolist()
 
-            boxes = results[0].boxes
-            confs = boxes.conf.tolist()
+        trees = []
+        for idx, (cls_id, conf, box) in enumerate(zip(boxes.cls.tolist(), confs, boxes.xyxy.tolist())):
+            if int(cls_id) == 0 and conf >= CONF_THRESH:
+                x1, y1, x2, y2 = [int(coord) for coord in box]
+                w = x2 - x1
+                h = y2 - y1
+                tree_id = f"tree_{idx+1}"
+                trees.append({"id": tree_id, "x": x1, "y": y1, "w": w, "h": h, "conf": round(conf,2)})
+        with frame_lock:
+            latest_detections = trees
+        time.sleep(0.05)  # small delay to prevent overload
 
-            # Count trees (class 0) above confidence threshold
-            tree_count = sum(
-                1
-                for cls_id, conf in zip(boxes.cls.tolist(), confs)
-                if int(cls_id) == 0 and conf >= CONF_THRESH
-            )
-
-            # Annotate frame with tree count
-            cv2.putText(
-                annotated,
-                f"Trees: {tree_count}",
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 255),
-                2,
-            )
-
-            _, buffer = cv2.imencode(".jpg", annotated)
-            frame_bytes = buffer.tobytes()
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-            )
-    finally:
-        cap.release()
-
-
+# ---- Lazy Webcam Start -----------------------------------------------------
 @views.route("/webcam")
 @login_required
 def webcam_page():
-    # Page with an <img> that points to the MJPEG stream
+    global capture_thread, detection_thread
+    if capture_thread is None:
+        capture_thread = threading.Thread(target=capture_frames, daemon=True)
+        capture_thread.start()
+    if detection_thread is None:
+        detection_thread = threading.Thread(target=detect_trees, daemon=True)
+        detection_thread.start()
     return render_template("webcam.html", user=current_user)
 
+# ---- MJPEG Stream ---------------------------------------------------------
+def gen_frames():
+    global latest_frame
+    while True:
+        with frame_lock:
+            if latest_frame is None:
+                continue
+            _, buffer = cv2.imencode(".jpg", latest_frame)
+            frame_bytes = buffer.tobytes()
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+        )
 
 @views.route("/video_feed")
 @login_required
 def video_feed():
     return Response(gen_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+# ---- Detections Endpoint --------------------------------------------------
+@views.route("/detections")
+@login_required
+def detections():
+    with frame_lock:
+        return jsonify({"trees": latest_detections})
+
+# ---- Decision Endpoint ----------------------------------------------------
+@views.route("/decision", methods=["POST"])
+@login_required
+def decision():
+    data = request.json
+    tree_id = data.get("tree_id")
+    choice = data.get("decision")
+    if tree_id and choice:
+        tree_decisions[tree_id] = choice
+        print(f"User {current_user.id} marked {tree_id} as {choice}")
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "error", "message": "Invalid data"}), 400
+
+# ---- Optional: Stop Webcam ------------------------------------------------
+@views.route("/webcam/stop")
+@login_required
+def stop_webcam():
+    global camera, capture_thread, detection_thread
+    if camera:
+        camera.release()
+        camera = None
+    capture_thread = None
+    detection_thread = None
+    return "Camera released"
